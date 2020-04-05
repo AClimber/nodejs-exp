@@ -3,13 +3,18 @@ const Course = require('../models/course');
 const router = Router();
 
 router.get('/', async (req, res, next) => {
-    const courses = await Course.getAll();
+    try {
+        // https://stackoverflow.com/questions/59753149/express-handlebars-wont-render-data
+        const courses = await Course.find().populate('userId', 'email name').lean();
 
-    res.render('courses', {
-        title: 'Courses',
-        isCourses: true,
-        courses
-    });
+        res.render('courses', {
+            title: 'Courses',
+            isCourses: true,
+            courses
+        });
+    } catch (e) {
+        console.log(e);
+    }
 });
 
 router.get('/:id/edit', async (req, res) => {
@@ -17,29 +22,55 @@ router.get('/:id/edit', async (req, res) => {
         return res.redirect('/');
     }
 
-    const course = await Course.getById(req.params.id);
-    res.render('course-edit', {
-        title: `Edit course ${course.title}`,
-        isCourses: true,
-        course
-    });
+    try {
+        const course = await Course.findById(req.params.id).lean();
+        res.render('course-edit', {
+            title: `Edit course ${course.title}`,
+            isCourses: true,
+            course
+        });
+    } catch (e) {
+        console.log(e);
+    }
 });
 
 router.post('/edit', async (req, res) => {
-    await Course.update(req.body);
-    res.redirect('/courses');
+    const {id} = req.body;
+    delete req.body.id;
+
+    try {
+        await Course.findByIdAndUpdate(id, req.body);
+        res.redirect('/courses');
+    } catch (e) {
+        console.log(e);
+    }
 });
 
 
 
 router.get('/:id', async (req, res) => {
-   const course = await Course.getById(req.params.id);
+    try {
+        const course = await Course.findById(req.params.id).lean();
 
-   res.render('course', {
-       layout: 'empty',
-       title: `Course ${course.title}`,
-       course
-   });
+        res.render('course', {
+            layout: 'empty',
+            title: `Course ${course.title}`,
+            course
+        });
+    } catch (e) {
+        console.log(e);
+    }
+});
+
+router.post('/remove', async (req, res) => {
+    try {
+        await Course.deleteOne({
+            _id: req.body.id
+        });
+        res.redirect('courses');
+    } catch (e) {
+        console.log(e);
+    }
 });
 
 module.exports = router;
